@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoVenta | AI-Driven Geospatial Site Selection</title>
+  <meta name="description" content="AI-powered geospatial tool that evaluates population density, supply-demand gaps, competitor clustering, and land valuation to recommend optimal business locations." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Ambient background glows -->
+  <div class="ambient" aria-hidden="true">
+    <div class="glow g1"></div>
+    <div class="glow g2"></div>
+    <div class="glow g3"></div>
+  </div>
+
+  <!-- ===== TOPBAR ===== -->
+  <header class="topbar" id="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#hero" aria-label="GeoVenta Home">
+        <svg class="brand-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="14" stroke="url(#lg1)" stroke-width="2"/>
+          <path d="M16 4 C10 10 8 14 16 16 C24 18 22 22 16 28" stroke="url(#lg2)" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="16" cy="16" r="3" fill="url(#lg1)"/>
+          <defs>
+            <linearGradient id="lg1" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#6366f1"/>
+              <stop offset="1" stop-color="#06b6d4"/>
+            </linearGradient>
+            <linearGradient id="lg2" x1="16" y1="4" x2="16" y2="28" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#a78bfa"/>
+              <stop offset="1" stop-color="#38bdf8"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="brand-name">GeoVenta</span>
+        <span class="brand-tag">AI Site Intelligence</span>
+      </a>
+
+      <nav class="topnav" aria-label="Primary">
+        <a href="#controls" class="nav-link">Analysis</a>
+        <a href="#results" class="nav-link">Rankings</a>
+        <a href="#map-section" class="nav-link">Map</a>
+        <a href="#forecast" class="nav-link">Forecast</a>
+        <a href="#method" class="nav-link">Method</a>
+      </nav>
+
+      <a class="run-btn" href="#controls" id="nav-run-btn">
+        <span class="btn-icon">⚡</span> Run Analysis
+      </a>
+    </div>
+  </header>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero" id="hero">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span> AI-Powered Geospatial Intelligence
+      </div>
+      <h1 class="hero-title">
+        Discover the <span class="gradient-text">Optimal Site</span><br/>
+        for Your Business
+      </h1>
+      <p class="hero-sub">
+        Our multi-factor AI engine scores every zone using population density, supply-demand gaps,
+        competitor clustering, and land valuation — surfacing the highest-potential locations
+        with zero manual research.
+      </p>
+      <div class="hero-ctas">
+        <a class="primary-btn" href="#controls" id="hero-cta-primary">
+          <span>Start Analysis</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="ghost-btn" href="#method">How It Works</a>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat-item">
+          <strong>4</strong>
+          <span>Scoring Factors</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <strong>Real-Time</strong>
+          <span>Map Overlay</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <strong>5-Year</strong>
+          <span>Land Forecast</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <strong>MCDA</strong>
+          <span>Weighted Scoring</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-visual" aria-hidden="true">
+      <div class="globe-ring r1"></div>
+      <div class="globe-ring r2"></div>
+      <div class="globe-ring r3"></div>
+      <div class="pulse-dot pd1"></div>
+      <div class="pulse-dot pd2"></div>
+      <div class="pulse-dot pd3"></div>
+      <div class="score-card-float sc1">
+        <div class="sc-label">Koregaon Park</div>
+        <div class="sc-score">92<span>/100</span></div>
+        <div class="sc-bar"><div class="sc-fill" style="width:92%"></div></div>
+      </div>
+      <div class="score-card-float sc2">
+        <div class="sc-label">Viman Nagar</div>
+        <div class="sc-score">87<span>/100</span></div>
+        <div class="sc-bar"><div class="sc-fill" style="width:87%"></div></div>
+      </div>
+      <div class="score-card-float sc3">
+        <div class="sc-label">Baner</div>
+        <div class="sc-score">79<span>/100</span></div>
+        <div class="sc-bar"><div class="sc-fill" style="width:79%; --fill-color:#06b6d4"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ANALYSIS CONTROLS ===== -->
+  <section class="section workspace" id="controls">
+    <div class="section-intro">
+      <p class="section-tag">Configuration</p>
+      <h2 class="section-title">Define Your Analysis Parameters</h2>
+      <p class="section-desc">Set your business type, location, budget, and customize the weighting of each scoring factor.</p>
+    </div>
+
+    <div class="workspace-grid">
+      <!-- Left: form -->
+      <form class="control-card" id="analysis-form" autocomplete="off">
+
+        <div class="form-group">
+          <h3 class="form-section-title">Business Profile</h3>
+          <div class="field-grid">
+
+            <label class="field">
+              <span class="field-label">Business Type</span>
+              <select id="business-type" name="businessType">
+                <option value="restaurant">🍽️ Restaurant / Café</option>
+                <option value="grocery">🛒 Grocery / Supermarket</option>
+                <option value="pharmacy">💊 Pharmacy / Clinic</option>
+                <option value="fashion">👗 Fashion Retail</option>
+                <option value="electronics">📱 Electronics Showroom</option>
+                <option value="warehouse">📦 Warehouse / Fulfilment</option>
+                <option value="coworking">💼 Co-working Space</option>
+                <option value="gym">🏋️ Gym / Fitness Studio</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Supplier Model</span>
+              <select id="supplier-model" name="supplierModel">
+                <option value="local">Local Supplier Network</option>
+                <option value="regional" selected>Regional Distributor</option>
+                <option value="national">National Logistics Chain</option>
+                <option value="import">Import-Heavy Sourcing</option>
+              </select>
+            </label>
+
+            <label class="field field-full">
+              <span class="field-label">Target City / Location</span>
+              <div class="input-icon-wrap">
+                <svg class="input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5A4.5 4.5 0 0 1 12.5 6c0 3.5-4.5 8.5-4.5 8.5S3.5 9.5 3.5 6A4.5 4.5 0 0 1 8 1.5z" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="6" r="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
+                <input id="target-location" name="targetLocation" type="text" value="Pune, Maharashtra" placeholder="e.g. Mumbai, Maharashtra" />
+              </div>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Search Radius (km)</span>
+              <input id="search-radius" name="searchRadius" type="number" min="1" max="50" value="8" />
+            </label>
+
+            <label class="field">
+              <span class="field-label">Monthly Budget (₹)</span>
+              <input id="monthly-budget" name="monthlyBudget" type="number" min="5000" step="5000" value="250000" />
+            </label>
+
+            <label class="field">
+              <span class="field-label">Required Space (sq ft)</span>
+              <input id="required-area" name="requiredArea" type="number" min="100" step="100" value="1800" />
+            </label>
+
+            <label class="field">
+              <span class="field-label">Forecast Horizon (years)</span>
+              <input id="forecast-years" name="forecastYears" type="number" min="1" max="10" value="5" />
+            </label>
+          </div>
+        </div>
+
+        <!-- Weight Sliders -->
+        <div class="form-group">
+          <div class="form-section-header">
+            <h3 class="form-section-title">MCDA Factor Weights</h3>
+            <span class="weight-total-badge" id="weight-total">100%</span>
+          </div>
+          <p class="form-section-note">Drag sliders to adjust how each factor contributes to the final score. Weights auto-normalize.</p>
+          <div class="weight-grid" id="weight-sliders"></div>
+        </div>
+
+        <div class="action-row">
+          <button class="primary-btn" id="analyze-btn" type="submit">
+            <span class="btn-spinner" id="analyze-spinner" aria-hidden="true"></span>
+            <span id="analyze-label">⚡ Analyze Best Locations</span>
+          </button>
+          <button class="outline-btn" id="reset-weights" type="button">Reset Weights</button>
+        </div>
+
+        <p class="form-status" id="form-status"></p>
+      </form>
+
+      <!-- Right: data source panel -->
+      <aside class="sources-card">
+        <h3 class="sources-title">Data Sources & Integration</h3>
+
+        <div id="google-connector" class="connector-card">
+          <div class="connector-header">
+            <div class="connector-icon maps-icon">🗺️</div>
+            <div>
+              <strong>Google Maps API</strong>
+              <p id="maps-status-text">Demo mode — synthetic place data</p>
+            </div>
+            <span class="conn-badge demo" id="maps-badge">DEMO</span>
+          </div>
+          <p class="connector-desc">Geocodes your target location and counts nearby competitor clusters, transit stops, and supplier nodes via Places API.</p>
+          <label class="api-key-field">
+            <span>API Key</span>
+            <input type="password" id="maps-api-key" placeholder="AIza…" autocomplete="off" />
+          </label>
+          <button class="sm-btn" id="activate-maps">Activate Live Maps</button>
+        </div>
+
+        <div class="connector-card">
+          <div class="connector-header">
+            <div class="connector-icon census-icon">📊</div>
+            <div>
+              <strong>Demographics Engine</strong>
+              <p>Census-style population & spending data</p>
+            </div>
+            <span class="conn-badge active">ACTIVE</span>
+          </div>
+          <p class="connector-desc">Population density, household income, and spending power are derived from census-style synthetic data with realistic regional variation.</p>
+        </div>
+
+        <div class="connector-card">
+          <div class="connector-header">
+            <div class="connector-icon ai-icon">🤖</div>
+            <div>
+              <strong>AI Scoring Engine</strong>
+              <p>MCDA weighted geospatial model</p>
+            </div>
+            <span class="conn-badge active">ACTIVE</span>
+          </div>
+          <p class="connector-desc">Multi-Criteria Decision Analysis (MCDA) normalizes all factors and produces a weighted composite score (0–100) per candidate zone.</p>
+        </div>
+
+        <div class="insight-box">
+          <p class="insight-title">What you get after each run</p>
+          <ul class="insight-list">
+            <li>🏆 Ranked candidate zones with composite scores</li>
+            <li>📈 Factor-level score breakdown per zone</li>
+            <li>🗺️ Interactive map with heatmap overlay</li>
+            <li>📉 5-year land valuation forecast chart</li>
+            <li>🧠 AI-generated location narrative</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===== RESULTS ===== -->
+  <section class="section results-section" id="results">
+    <div class="section-intro">
+      <p class="section-tag">MCDA Rankings</p>
+      <h2 class="section-title">Recommended Locations</h2>
+      <p class="section-note" id="results-meta">Run the analysis above to see ranked candidate zones.</p>
+    </div>
+    <div class="results-grid" id="ranked-results">
+      <!-- injected by JS -->
+      <div class="results-placeholder">
+        <div class="placeholder-icon">🏙️</div>
+        <p>Your ranked locations will appear here after running the analysis.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== MAP + ANALYSIS SECTION ===== -->
+  <section class="section map-analysis-section" id="map-section">
+    <div class="map-forecast-grid">
+
+      <!-- Map Panel -->
+      <div class="map-card">
+        <div class="card-header">
+          <div>
+            <p class="card-tag">Location Canvas</p>
+            <h2 class="card-title">Candidate Site Distribution</h2>
+          </div>
+          <div class="map-controls">
+            <button class="map-ctrl-btn active" id="view-score" title="Score view">Score</button>
+            <button class="map-ctrl-btn" id="view-density" title="Density heatmap">Density</button>
+            <button class="map-ctrl-btn" id="view-competition" title="Competition overlay">Competition</button>
+          </div>
+        </div>
+
+        <div id="map-stage" class="map-stage">
+          <div class="map-placeholder">
+            <div class="map-grid-bg" aria-hidden="true"></div>
+            <div class="map-empty-msg">
+              <div class="map-empty-icon">🗺️</div>
+              <p>Run the analysis to populate the interactive map</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="site-list" class="site-list"></div>
+
+        <div class="map-legend" id="map-legend" style="display:none">
+          <span>Low</span>
+          <div class="legend-bar"></div>
+          <span>High</span>
+          <span class="legend-metric" id="legend-metric">Score</span>
+        </div>
+      </div>
+
+      <!-- Right: Radar + Forecast -->
+      <div class="right-panels">
+
+        <!-- Radar Chart -->
+        <div class="radar-card" id="radar-section">
+          <div class="card-header">
+            <div>
+              <p class="card-tag">Factor Breakdown</p>
+              <h2 class="card-title">Score Radar</h2>
+            </div>
+            <select class="sm-select" id="radar-site-select">
+              <option value="">— select site —</option>
+            </select>
+          </div>
+          <div class="radar-wrap">
+            <canvas id="radar-canvas" width="300" height="300"></canvas>
+          </div>
+        </div>
+
+        <!-- Forecast Chart -->
+        <div class="forecast-card" id="forecast">
+          <div class="card-header">
+            <div>
+              <p class="card-tag">Land Prediction</p>
+              <h2 class="card-title">Future Price Outlook</h2>
+            </div>
+            <p class="card-note" id="forecast-meta">Select a site to inspect its forecast.</p>
+          </div>
+          <div id="forecast-summary" class="forecast-summary"></div>
+          <div class="chart-wrap">
+            <canvas id="forecast-canvas" width="400" height="220"></canvas>
+          </div>
+          <div id="forecast-details" class="forecast-details"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== AI NARRATIVE ===== -->
+  <section class="section narrative-section" id="narrative-section" style="display:none">
+    <div class="section-intro">
+      <p class="section-tag">AI Insight</p>
+      <h2 class="section-title">Location Intelligence Report</h2>
+    </div>
+    <div class="narrative-card" id="narrative-card">
+      <div class="narrative-body" id="narrative-body"></div>
+    </div>
+  </section>
+
+  <!-- ===== METHOD ===== -->
+  <section class="section method-section" id="method">
+    <div class="section-intro">
+      <p class="section-tag">How It Works</p>
+      <h2 class="section-title">The Scoring Engine</h2>
+      <p class="section-desc">A transparent, research-backed methodology combining geospatial analysis and multi-criteria decision making.</p>
+    </div>
+
+    <div class="method-grid">
+      <article class="method-card">
+        <div class="method-num">01</div>
+        <div class="method-icon">📍</div>
+        <h3>Candidate Zone Generation</h3>
+        <p>The engine generates candidate zones around your target city based on your business type and radius preference, using real geospatial offsets or live geocoding when an API key is active.</p>
+      </article>
+
+      <article class="method-card">
+        <div class="method-num">02</div>
+        <div class="method-icon">👥</div>
+        <h3>Population & Demand Analysis</h3>
+        <p>Census-style population density and spending power data are mapped to each zone. High-density, high-income areas receive a demand multiplier appropriate to the business type.</p>
+      </article>
+
+      <article class="method-card">
+        <div class="method-num">03</div>
+        <div class="method-icon">🏪</div>
+        <h3>Competitor Cluster Detection</h3>
+        <p>The number of existing businesses in the same sector is counted per zone using Google Places API (or synthetic proxies). Market saturation reduces a zone's opportunity score.</p>
+      </article>
+
+      <article class="method-card">
+        <div class="method-num">04</div>
+        <div class="method-icon">💰</div>
+        <h3>Land Valuation & Budget Fit</h3>
+        <p>Estimated land or lease costs are compared against your monthly budget. Zones within budget score higher on the cost-efficiency axis, while overbudget zones are flagged.</p>
+      </article>
+
+      <article class="method-card">
+        <div class="method-num">05</div>
+        <div class="method-icon">🤖</div>
+        <h3>MCDA Weighted Scoring</h3>
+        <p>All factors are normalized to [0,1] and combined using user-defined weights via MCDA. A composite score (0–100) is assigned to each zone and zones are ranked automatically.</p>
+      </article>
+
+      <article class="method-card">
+        <div class="method-num">06</div>
+        <div class="method-icon">📈</div>
+        <h3>Land Price Forecasting</h3>
+        <p>A compound growth model with zone-specific growth rate, demand pressure, and infrastructure score projects land valuation 1–10 years into the future with a confidence band.</p>
+      </article>
+    </div>
+
+    <!-- Factor table -->
+    <div class="factor-table-wrap">
+      <h3 class="factor-table-title">Scoring Factor Reference</h3>
+      <table class="factor-table">
+        <thead>
+          <tr>
+            <th>Factor</th>
+            <th>What it measures</th>
+            <th>Benefit / Cost</th>
+            <th>Default Weight</th>
+          </tr>
+        </thead>
+        <tbody id="factor-table-body">
+          <!-- populated by JS -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <strong>GeoVenta</strong>
+        <span>AI-Driven Geospatial Site Selection</span>
+      </div>
+      <p class="footer-note">
+        Scores are analytical outputs intended to guide — not replace — professional site surveys and due diligence.
+        Powered by MCDA + synthetic geospatial intelligence.
+      </p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
