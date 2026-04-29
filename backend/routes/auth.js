@@ -1,10 +1,3 @@
-/* =====================================================================
-   routes/auth.js — JWT Authentication
-   POST /api/auth/register  — create account
-   POST /api/auth/login     — sign in
-   GET  /api/auth/verify    — validate token
-   GET  /api/auth/me        — get current user
-   ===================================================================== */
 
 const express  = require('express');
 const router   = express.Router();
@@ -17,7 +10,6 @@ const JWT_SECRET   = process.env.JWT_SECRET || 'geoventa_super_secret_key_2026';
 const JWT_EXPIRES  = '7d';
 const USERS_FILE   = path.join(__dirname, '../data/users.json');
 
-/* ── Persistent user store (JSON file) ─────────────────────────────── */
 function loadUsers() {
   try {
     if (!fs.existsSync(USERS_FILE)) return [];
@@ -31,7 +23,6 @@ function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
 
-/* ── Token helpers ──────────────────────────────────────────────────── */
 function signToken(userId) {
   return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
 }
@@ -40,7 +31,6 @@ function verifyToken(token) {
   return jwt.verify(token, JWT_SECRET);
 }
 
-/* ── Auth middleware (exported for server.js) ────────────────────────── */
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
   const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
@@ -57,12 +47,10 @@ function requireAuth(req, res, next) {
   }
 }
 
-/* ── Safe user object (never expose password hash) ─────────────────── */
 function safeUser(u) {
   return { id: u.id, email: u.email, firstName: u.firstName, createdAt: u.createdAt };
 }
 
-/* ── POST /api/auth/register ─────────────────────────────────────────── */
 router.post('/register', async (req, res) => {
   const { email = '', password = '', firstName = '' } = req.body;
 
@@ -125,13 +113,11 @@ router.get('/verify', requireAuth, (req, res) => {
   res.json({ valid: true, user: req.user });
 });
 
-/* ── GET /api/auth/me ────────────────────────────────────────────────── */
 router.get('/me', requireAuth, (req, res) => {
   res.json({ user: req.user });
 });
 
-/* ── POST /api/auth/logout ───────────────────────────────────────────── */
-// (JWT is stateless; client just deletes the token. This is a no-op endpoint.)
+
 router.post('/logout', (req, res) => {
   res.json({ message: 'Logged out — please delete your token client-side.' });
 });

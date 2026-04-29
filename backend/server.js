@@ -1,7 +1,3 @@
-/* =====================================================================
-   GeoVenta — server.js
-   Express REST API Server for AI Geospatial Site Selection
-   ===================================================================== */
 
 require('dotenv').config();
 const express      = require('express');
@@ -18,29 +14,25 @@ const { router: authRouter, requireAuth } = require('./routes/auth');
 const app  = express();
 const PORT = process.env.PORT || 3001;
 
-/* ── Middleware ──────────────────────────────────────────────────────── */
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Rate limiter — 100 requests per 15 minutes per IP
+
 app.use('/api/', rateLimit({
   windowMs : 15 * 60 * 1000,
   max      : 100,
   message  : { error: 'Too many requests. Please slow down.' }
 }));
 
-/* ── Static frontend ─────────────────────────────────────────────────── */
-// Serve the root project folder as static files
+
 app.use(express.static(path.join(__dirname, '..')));
 
-/* ── API Routes ──────────────────────────────────────────────────────── */
-app.use('/api/auth',      authRouter);               // Public — login/register
-app.use('/api/analysis',  requireAuth, analysisRouter); // Protected by JWT
-app.use('/api/geocode',   requireAuth, geocodeRouter);  // Protected by JWT
-app.use('/api/forecast',  requireAuth, forecastRouter); // Protected by JWT
+app.use('/api/auth',      authRouter);               
+app.use('/api/analysis',  requireAuth, analysisRouter); 
+app.use('/api/geocode',   requireAuth, geocodeRouter);  
+app.use('/api/forecast',  requireAuth, forecastRouter); 
 
-/* ── Health Check (public) ───────────────────────────────────────────── */
 app.get('/api/health', (req, res) => {
   res.json({
     status  : 'OK',
@@ -52,11 +44,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-/* ── SPA / login fallback ───────────────────────────────────────────── */
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, '..', 'login.html')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, '..', 'index.html')));
 
-/* ── Global error handler ────────────────────────────────────────────── */
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err.stack);
   res.status(err.status || 500).json({

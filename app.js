@@ -1,25 +1,17 @@
-/* =====================================================================
-   GeoVenta — app.js (Full-Stack Edition)
-   Frontend orchestrator — calls the Express backend API
-   Falls back gracefully to client-side engine if server is offline
-   ===================================================================== */
 
-/* =====================================================================
-   AUTH GUARD — runs before anything else
-   ===================================================================== */
 (function authGuard() {
   const token = localStorage.getItem('gv_token') || sessionStorage.getItem('gv_token');
   if (!token) {
     window.location.href = '/login.html';
     return;
   }
-  // Verify token with the backend; if invalid → login
+  
   fetch('/api/auth/verify', { headers: { 'Authorization': `Bearer ${token}` } })
     .then(r => {
       if (!r.ok && token !== 'demo') window.location.href = '/login.html';
       else if (r.ok) r.json().then(d => injectUserGreeting(d.user));
     })
-    .catch(() => { /* Server offline — stay in demo mode */ });
+    .catch(() => {  });
 })();
 
 function injectUserGreeting(user) {
@@ -43,16 +35,13 @@ function logout() {
   window.location.href = '/login.html';
 }
 
-/* ── Auth header helper ─────────────────────────────────────────────── */
 function authHeader() {
   const token = localStorage.getItem('gv_token') || sessionStorage.getItem('gv_token') || '';
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
-/* ── Config ─────────────────────────────────────────────────────────── */
-const API_BASE = '/api';   // Same-origin; change to http://localhost:3001/api for dev
+const API_BASE = '/api';   
 
-/* ── Application State ───────────────────────────────────────────────── */
 const state = {
   sites          : [],
   selectedSiteId : null,
@@ -63,7 +52,6 @@ const state = {
   chartInstances : { radar: null, forecast: null }
 };
 
-/* ── MCDA Factor definitions (mirrors backend) ───────────────────────── */
 const FACTORS = [
   { id: 'population',   name: 'Population Density',    type: 'benefit', default: 30, icon: '👥' },
   { id: 'supplyDemand', name: 'Supply-Demand Gap',     type: 'benefit', default: 25, icon: '📈' },
@@ -73,9 +61,6 @@ const FACTORS = [
 
 const weights = { population: 30, supplyDemand: 25, competition: 20, landCost: 25 };
 
-/* ===========================================================
-   BOOTSTRAP
-   =========================================================== */
 document.addEventListener('DOMContentLoaded', async () => {
   await loadChartJS();
   initWeightSliders();
@@ -84,7 +69,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   initFactorTable();
 });
 
-/* ── Chart.js loader ─────────────────────────────────────────────────── */
 async function loadChartJS() {
   if (window.Chart) return;
   await new Promise(resolve => {
@@ -95,14 +79,13 @@ async function loadChartJS() {
   });
 }
 
-/* ── Server health check ─────────────────────────────────────────────── */
 async function checkServerStatus() {
   try {
     const res  = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
     const json = await res.json();
     state.serverOnline = json.status === 'OK';
 
-    // Update connector cards
+    
     if (state.serverOnline) {
       setStatus('form-status', '✅ Backend API connected — full-stack mode active', 'var(--emerald)');
       if (json.mapsKey) {
@@ -116,9 +99,6 @@ async function checkServerStatus() {
   }
 }
 
-/* ===========================================================
-   WEIGHT SLIDERS
-   =========================================================== */
 function initWeightSliders() {
   const container = document.getElementById('weight-sliders');
   if (!container) return;
@@ -158,12 +138,12 @@ function rebalanceWeights(changedId) {
     otherIds.forEach(id => {
       weights[id] = Math.round((weights[id] / otherTotal) * remainder);
     });
-    // Correct rounding drift
+    
     const drift = 100 - Object.values(weights).reduce((a, b) => a + b, 0);
     weights[otherIds[0]] += drift;
   }
 
-  // Sync UI
+  
   FACTORS.forEach(f => {
     const v = Math.max(0, weights[f.id]);
     const badge  = document.getElementById(`val-${f.id}`);
@@ -182,9 +162,6 @@ function rebalanceWeights(changedId) {
   }
 }
 
-/* ===========================================================
-   FORM — Event listeners
-   =========================================================== */
 function attachFormEvents() {
   document.getElementById('analysis-form')
     ?.addEventListener('submit', e => { e.preventDefault(); runAnalysis(); });
@@ -195,7 +172,7 @@ function attachFormEvents() {
       FACTORS.forEach(f => rebalanceWeights(f.id));
     });
 
-  // Map view mode buttons
+  
   ['score', 'density', 'competition'].forEach(mode => {
     document.getElementById(`view-${mode}`)
       ?.addEventListener('click', () => {
@@ -208,14 +185,11 @@ function attachFormEvents() {
       });
   });
 
-  // Radar site selector
+  
   document.getElementById('radar-site-select')
     ?.addEventListener('change', e => selectSite(e.target.value));
 }
 
-/* ===========================================================
-   MAIN PIPELINE — run analysis
-   =========================================================== */
 async function runAnalysis() {
   setLoading(true);
   clearResults();
@@ -226,7 +200,7 @@ async function runAnalysis() {
     let sites, narrative, meta;
 
     if (state.serverOnline) {
-      // ── LIVE: call Express API ──
+      
       const res  = await fetch(`${API_BASE}/analysis/run`, {
         method  : 'POST',
         headers : { 'Content-Type': 'application/json', ...authHeader() },
@@ -244,7 +218,7 @@ async function runAnalysis() {
       meta      = data.meta;
 
     } else {
-      // ── FALLBACK: client-side engine ──
+      
       ({ sites, narrative, meta } = clientSideEngine(payload));
     }
 
@@ -265,7 +239,6 @@ async function runAnalysis() {
   }
 }
 
-/* ── Build API payload from form ─────────────────────────────────────── */
 function buildPayload() {
   return {
     targetLocation : getVal('target-location', 'Pune, Maharashtra'),
@@ -280,10 +253,6 @@ function buildPayload() {
   };
 }
 
-/* ===========================================================
-   CLIENT-SIDE FALLBACK ENGINE
-   (mirrors backend logic in pure JS when server is offline)
-   =========================================================== */
 function clientSideEngine(p) {
   const ZONES = ['Downtown Core','North District','Tech Park Hub','East Suburbs','West Retail Corridor','South Industrial'];
   const CITY_POP = { pune: 5765, mumbai: 20667, bangalore: 4381, hyderabad: 5496, delhi: 11317, default: 4000 };
@@ -314,7 +283,7 @@ function clientSideEngine(p) {
              distFromCenter: parseFloat(dist.toFixed(2)) };
   });
 
-  // Normalize
+  
   const dims = ['population','supplyDemand','competition','landCost'];
   const ranges = {};
   dims.forEach(d => {
@@ -331,7 +300,7 @@ function clientSideEngine(p) {
     return { ...z, normalized: norm };
   });
 
-  // MCDA Score
+  
   const wTotal = Object.values(p.weights).reduce((a, b) => a + b, 0);
   const scored = normalized.map(z => {
     const n    = z.normalized;
@@ -359,7 +328,7 @@ function clientSideEngine(p) {
     s.forecast = buildForecastClient(s, p.forecastYears);
   });
 
-  // Simple narrative
+  
   const top = scored[0];
   const narrative = [
     { heading: 'Top Recommendation', body: `<strong>${top.zone}</strong> scores <strong>${top.score}/100</strong> — Rank #1 among ${scored.length} zones.` },
@@ -398,9 +367,6 @@ function buildForecastClient(site, years) {
            horizonYears: years, riskBand: parseFloat((0.015 * 1.96 * Math.sqrt(years) * 100).toFixed(1)) };
 }
 
-/* ===========================================================
-   RENDER ALL
-   =========================================================== */
 function renderAll() {
   renderRankings();
   setupMapCanvas();
@@ -413,7 +379,6 @@ function renderAll() {
   }
 }
 
-/* ── Rankings ────────────────────────────────────────────────────────── */
 function renderRankings() {
   const container = document.getElementById('ranked-results');
   if (!container) return;
@@ -517,9 +482,6 @@ function selectSite(siteId) {
   renderForecastChart(site);
 }
 
-/* ===========================================================
-   CANVAS MAP
-   =========================================================== */
 function setupMapCanvas() {
   const stage = document.getElementById('map-stage');
   if (!stage) return;
@@ -543,13 +505,13 @@ function drawMapCanvas() {
   const H   = canvas.height;
   ctx.clearRect(0, 0, W, H);
 
-  // Background grid
+  
   ctx.strokeStyle = 'rgba(99,102,241,0.06)';
   ctx.lineWidth   = 1;
   for (let x = 0; x < W; x += 40 * dpr) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
   for (let y = 0; y < H; y += 40 * dpr) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
 
-  // Compute bounding box of all site lat/lng → map to canvas pixels
+  
   const lats = state.sites.map(s => s.lat);
   const lngs = state.sites.map(s => s.lng);
   const minLat = Math.min(...lats), maxLat = Math.max(...lats);
@@ -565,7 +527,7 @@ function drawMapCanvas() {
     };
   }
 
-  // Draw connection lines
+  
   ctx.strokeStyle = 'rgba(99,102,241,0.12)';
   ctx.lineWidth   = 1.5 * dpr;
   ctx.setLineDash([4 * dpr, 6 * dpr]);
@@ -578,7 +540,7 @@ function drawMapCanvas() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Draw each site
+  
   state.sites.forEach(site => {
     const p          = project(site.lat, site.lng);
     const isSelected = site.id === state.selectedSiteId;
@@ -605,7 +567,7 @@ function drawMapCanvas() {
 
     if (isSelected) radius += 5 * dpr;
 
-    // Glow
+    
     const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 3);
     grad.addColorStop(0, color + '55');
     grad.addColorStop(1, color + '00');
@@ -614,13 +576,13 @@ function drawMapCanvas() {
     ctx.arc(p.x, p.y, radius * 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Main dot
+    
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Selection ring
+    
     if (isSelected) {
       ctx.strokeStyle = '#fff';
       ctx.lineWidth   = 2.5 * dpr;
@@ -629,7 +591,7 @@ function drawMapCanvas() {
       ctx.stroke();
     }
 
-    // Label
+    
     ctx.fillStyle   = '#f1f5f9';
     ctx.font        = `${isSelected ? 'bold ' : ''}${11 * dpr}px 'Inter', sans-serif`;
     ctx.textAlign   = 'center';
@@ -638,7 +600,7 @@ function drawMapCanvas() {
     ctx.fillText(site.zone, p.x, p.y - radius - 7 * dpr);
     ctx.shadowBlur  = 0;
 
-    // Score badge if in score mode
+    
     if (state.mapMode === 'score') {
       ctx.fillStyle = color;
       ctx.font      = `bold ${10 * dpr}px 'Space Grotesk', sans-serif`;

@@ -1,26 +1,11 @@
-/* =====================================================================
-   services/mcda.js — Multi-Criteria Decision Analysis Engine
-   Core scoring algorithm for geospatial site ranking
-   ===================================================================== */
 
-/**
- * Normalize a raw value to [0, 1] using min-max normalization.
- * @param {number} val
- * @param {number} min
- * @param {number} max
- */
 function minMax(val, min, max) {
   if (max === min) return 0.5;
   return Math.max(0, Math.min(1, (val - min) / (max - min)));
 }
 
-/**
- * Normalize an array of zone raw factor objects into [0,1].
- * Returns the same array augmented with a `normalized` field.
- * @param {Array} zones — each zone must have: population, supplyDemand, competition, landCost
- */
 function normalizeZones(zones) {
-  // Find min / max per dimension
+  
   const dims = ['population', 'supplyDemand', 'competition', 'landCost'];
   const range = {};
   dims.forEach(d => {
@@ -39,34 +24,28 @@ function normalizeZones(zones) {
       normalized: {
         population   : popN,
         supplyDemand : sdN,
-        competition  : compN,   // Higher = worse  (cost criterion)
-        landCost     : lcN      // Higher = worse  (cost criterion)
+        competition  : compN,   
+        landCost     : lcN      
       }
     };
   });
 }
 
-/**
- * Calculate weighted MCDA composite score for every zone.
- * @param {Array}  zones   — output of normalizeZones()
- * @param {Object} weights — { population, supplyDemand, competition, landCost }
- * returns zones sorted by score descending, each with .score and .rank
- */
 function scoreZones(zones, weights) {
-  // Ensure weights sum to 100; if not, rescale
+  
   const wTotal = Object.values(weights).reduce((a, b) => a + b, 0);
   const wNorm  = {};
   Object.keys(weights).forEach(k => (wNorm[k] = weights[k] / wTotal));
 
   const scored = zones.map(z => {
     const n = z.normalized;
-    // Benefit factors: higher raw norm → higher score
-    // Cost factors:    lower  raw norm → higher score  (invert with 1 - n)
+    
+    
     const contrib = {
       population   : n.population   * wNorm.population,
       supplyDemand : n.supplyDemand * wNorm.supplyDemand,
-      competition  : (1 - n.competition) * wNorm.competition,  // invert
-      landCost     : (1 - n.landCost)    * wNorm.landCost       // invert
+      competition  : (1 - n.competition) * wNorm.competition,  
+      landCost     : (1 - n.landCost)    * wNorm.landCost       
     };
 
     const raw = contrib.population + contrib.supplyDemand + contrib.competition + contrib.landCost;
@@ -87,9 +66,6 @@ function scoreZones(zones, weights) {
     .map((z, i) => ({ ...z, rank: i + 1 }));
 }
 
-/**
- * Grade label and CSS class from score.
- */
 function gradeFromScore(score) {
   if (score >= 80) return { label: 'Excellent Match', cls: 'excellent' };
   if (score >= 65) return { label: 'Good Match',      cls: 'good' };

@@ -1,9 +1,3 @@
-/* =====================================================================
-   services/narrative.js — AI Narrative Report Generator
-   Produces a structured analytical text report for the top-ranked site
-   based on all computed factors. Designed to plug into an LLM endpoint
-   or run fully local as a template-based generator.
-   ===================================================================== */
 
 const BUSINESS_LABELS = {
   restaurant  : 'Restaurant / Café',
@@ -30,11 +24,6 @@ const SCORE_DESCRIPTOR = (score) => {
   return               { adj: 'cautious', strength: 'limited' };
 };
 
-/**
- * Generate a structured narrative report for a single site.
- * @param {object} site  — fully scored zone object
- * @param {object} input — original user input params
- */
 function generateSiteNarrative(site, input) {
   const bLabel  = BUSINESS_LABELS[input.businessType] || 'Business';
   const compAdj = COMPETITION_ADJECTIVE(site.competition);

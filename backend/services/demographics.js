@@ -1,11 +1,5 @@
-/* =====================================================================
-   services/demographics.js — Synthetic & Real Demographics Engine
-   Generates population density, demand scores, and spending power
-   per candidate zone. Falls back to realistic synthetic data when
-   a live census/API source is unavailable.
-   ===================================================================== */
 
-// Indian city demographic profiles (realistic seed data)
+
 const CITY_PROFILES = {
   'pune'       : { basePopDensity: 5765, medianIncome: 42000, growthRate: 0.068, tier: 1 },
   'mumbai'     : { basePopDensity: 20667, medianIncome: 55000, growthRate: 0.05,  tier: 1 },
@@ -22,7 +16,7 @@ const CITY_PROFILES = {
   'default'    : { basePopDensity: 3500, medianIncome: 25000, growthRate: 0.045, tier: 3 }
 };
 
-// Zone type modifiers — how much each zone type boosts/reduces demand
+
 const ZONE_MODIFIERS = {
   'downtown core'           : { pop: 1.4, demand: 1.6, comp: 1.8 },
   'north district'          : { pop: 1.1, demand: 1.1, comp: 1.0 },
@@ -34,7 +28,7 @@ const ZONE_MODIFIERS = {
   'old city'                : { pop: 1.2, demand: 1.0, comp: 1.4 },
 };
 
-// Business type demand multipliers
+
 const BUSINESS_DEMAND = {
   restaurant  : { popWeight: 1.5, minDensity: 3000, idealIncome: 40000 },
   grocery     : { popWeight: 2.0, minDensity: 5000, idealIncome: 28000 },
@@ -46,9 +40,6 @@ const BUSINESS_DEMAND = {
   gym         : { popWeight: 1.3, minDensity: 5000, idealIncome: 45000 }
 };
 
-/**
- * Resolve the city profile from a free-text location string.
- */
 function getCityProfile(locationStr) {
   const lower = (locationStr || '').toLowerCase();
   for (const key of Object.keys(CITY_PROFILES)) {
@@ -57,10 +48,6 @@ function getCityProfile(locationStr) {
   return { ...CITY_PROFILES['default'], city: 'unknown' };
 }
 
-/**
- * Generate synthetic demographics for a list of zone names.
- * Applies city profile + zone type modifiers + gaussian noise.
- */
 function generateZoneDemographics(zones, locationStr, businessType) {
   const city    = getCityProfile(locationStr);
   const bizMeta = BUSINESS_DEMAND[businessType] || BUSINESS_DEMAND.restaurant;
@@ -70,19 +57,19 @@ function generateZoneDemographics(zones, locationStr, businessType) {
     const mod  = Object.entries(ZONE_MODIFIERS).find(([k]) => zKey.includes(k))?.[1]
                  || { pop: 1.0, demand: 1.0, comp: 1.0 };
 
-    // Gaussian noise: mean 0, std 0.15
+    
     const noise = () => (Math.random() + Math.random() + Math.random() - 1.5) * 0.15;
 
     const popDensity     = Math.round(city.basePopDensity * mod.pop * (1 + noise()));
     const medianIncome   = Math.round(city.medianIncome   * (1 + noise() * 0.5));
 
-    // Supply-demand gap: demand_score (0-1)
-    // High pop + high income relative to minDensity & idealIncome = high demand
+    
+    
     const popScore  = Math.min(popDensity / (bizMeta.minDensity * 2), 1);
     const incomeAdj = medianIncome / bizMeta.idealIncome;
     const supplyDemand = Math.max(0, Math.min(1, (popScore * bizMeta.popWeight * 0.5 + incomeAdj * 0.5) * mod.demand * (1 + noise() * 0.2)));
 
-    // Competitor count: Poisson-like simulation
+    
     const baseComp   = Math.round(12 * mod.comp * (1 + noise()));
     const competition = Math.max(0, baseComp);
 

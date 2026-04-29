@@ -1,9 +1,6 @@
-/* =====================================================================
-   GeoVenta — styles.css
-   Premium dark-mode geospatial AI dashboard
-   ===================================================================== */
 
-/* ── Custom Properties ─────────────────────────────────────── */
+
+
 :root {
   --bg:           #060a14;
   --bg-2:         #0c1220;
@@ -38,7 +35,7 @@
   --font-head:    'Space Grotesk', 'Inter', sans-serif;
 }
 
-/* ── Reset & Base ───────────────────────────────────────────── */
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {
@@ -55,7 +52,7 @@ button { cursor: pointer; font-family: inherit; }
 input, select, textarea { font-family: inherit; }
 ::selection { background: rgba(99,102,241,0.35); }
 
-/* ── Ambient Glows ──────────────────────────────────────────── */
+
 .ambient { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
 .glow {
   position: absolute;
@@ -73,7 +70,7 @@ input, select, textarea { font-family: inherit; }
   to   { transform: translateY(-40px) scale(1.08); }
 }
 
-/* ── Topbar ─────────────────────────────────────────────────── */
+
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -152,7 +149,7 @@ input, select, textarea { font-family: inherit; }
 .run-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(99,102,241,0.55); }
 .btn-icon { font-size: 0.9rem; }
 
-/* ── Section Utility ──────────────────────────────────────── */
+
 .section {
   position: relative;
   z-index: 1;
@@ -199,7 +196,7 @@ input, select, textarea { font-family: inherit; }
   background-clip: text;
 }
 
-/* ── Hero ────────────────────────────────────────────────── */
+
 .hero {
   position: relative;
   z-index: 1;
@@ -280,7 +277,7 @@ input, select, textarea { font-family: inherit; }
 .stat-item span { font-size: 0.72rem; color: var(--text-3); letter-spacing: 0.04em; }
 .stat-divider { width: 1px; height: 36px; background: var(--border-soft); flex-shrink: 0; }
 
-/* Hero Visual */
+
 .hero-visual {
   position: relative;
   height: 420px;
@@ -333,7 +330,7 @@ input, select, textarea { font-family: inherit; }
 .sc-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 99px; margin-top: 6px; overflow: hidden; }
 .sc-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--fill-color, var(--indigo)), var(--cyan)); transition: width 1s ease; }
 
-/* ── Buttons ─────────────────────────────────────────────── */
+
 .primary-btn {
   display: inline-flex;
   align-items: center;
@@ -402,7 +399,7 @@ input, select, textarea { font-family: inherit; }
   font-size: 0.8rem;
 }
 
-/* ── Analysis Form ──────────────────────────────────────── */
+
 .workspace-grid {
   display: grid;
   grid-template-columns: 1fr 380px;
@@ -495,7 +492,7 @@ input, select, textarea { font-family: inherit; }
 .input-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
 .input-icon-wrap input { padding-left: 36px; width: 100%; }
 
-/* Weight Sliders */
+
 .weight-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -552,7 +549,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   min-height: 1.2rem;
 }
 
-/* Spinner */
+
 .btn-spinner {
   display: none;
   width: 16px; height: 16px;
@@ -564,7 +561,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .btn-spinner.active { display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* API Key field */
+
 .api-key-field {
   display: flex;
   flex-direction: column;
@@ -589,7 +586,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
 }
 
-/* ── Sources Card ───────────────────────────────────────── */
+
 .sources-title {
   font-family: var(--font-head);
   font-size: 1rem;
@@ -641,7 +638,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .insight-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .insight-list li { font-size: 0.8rem; color: var(--text-2); }
 
-/* ── Results Section ───────────────────────────────────── */
+
 .results-section { padding-top: 0; }
 .results-grid {
   display: grid;
@@ -665,7 +662,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 }
 .placeholder-icon { font-size: 3rem; opacity: 0.5; }
 
-/* Result Card */
+
 .result-card {
   background: var(--bg-card);
   border: 1px solid var(--border-soft);
@@ -767,7 +764,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 }
 .rc-view-btn:hover { background: rgba(99,102,241,0.2); }
 
-/* ── Map + Analysis ──────────────────────────────────────── */
+
 .map-analysis-section { padding-top: 0; }
 .map-forecast-grid {
   display: grid;
@@ -828,7 +825,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   color: var(--indigo-light);
 }
 
-/* Map Stage */
+
 .map-stage {
   width: 100%;
   height: 380px;
@@ -858,7 +855,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .map-empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.5; }
 .map-empty-msg p { font-size: 0.85rem; color: var(--text-3); }
 
-/* Canvas map (our custom drawn map) */
+
 #map-canvas {
   width: 100%;
   height: 100%;
@@ -907,14 +904,14 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 }
 .legend-metric { margin-left: auto; font-weight: 600; color: var(--indigo-light); }
 
-/* ── Radar ────────────────────────────────────────────── */
+
 .radar-wrap {
   display: flex;
   justify-content: center;
   padding: 1rem 0;
 }
 
-/* ── Forecast ─────────────────────────────────────────── */
+
 .forecast-summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -959,7 +956,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .fd-item strong { color: var(--text-1); font-weight: 600; }
 .fd-item span { color: var(--text-3); display: block; font-size: 0.72rem; margin-top: 2px; }
 
-/* ── Narrative ───────────────────────────────────────── */
+
 .narrative-section { padding-top: 0; }
 .narrative-card {
   background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(6,182,212,0.04));
@@ -979,7 +976,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .narrative-body li { margin-bottom: 0.3rem; }
 .narrative-body .highlight { color: var(--indigo-light); font-weight: 600; }
 
-/* ── Method Section ──────────────────────────────────── */
+
 .method-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -1012,7 +1009,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .method-card h3 { font-family: var(--font-head); font-size: 0.95rem; font-weight: 700; color: var(--text-1); margin-bottom: 8px; }
 .method-card p { font-size: 0.82rem; color: var(--text-3); line-height: 1.65; }
 
-/* Factor Table */
+
 .factor-table-wrap {
   background: var(--bg-card);
   border: 1px solid var(--border-soft);
@@ -1053,7 +1050,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .ft-type-cost    { color: var(--rose); font-weight: 600; }
 .ft-weight { font-weight: 700; color: var(--indigo-light); }
 
-/* ── Footer ──────────────────────────────────────────── */
+
 .footer {
   position: relative;
   z-index: 1;
@@ -1074,19 +1071,19 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .footer-brand span { font-size: 0.75rem; color: var(--text-3); }
 .footer-note { font-size: 0.78rem; color: var(--text-3); max-width: 500px; line-height: 1.6; }
 
-/* ── Animations ──────────────────────────────────────── */
+
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Scrollbar ───────────────────────────────────────── */
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.5); }
 
-/* ── Responsive ──────────────────────────────────────── */
+
 @media (max-width: 768px) {
   .topnav { display: none; }
   .section { padding: 60px 1.25rem; }

@@ -1,12 +1,7 @@
-/* =====================================================================
-   routes/geocode.js — GET /api/geocode
-   Proxy for Google Maps Geocoding + Places API (keeps API key server-side)
-   ===================================================================== */
 const express  = require('express');
 const router   = express.Router();
 const { geocodeLocation, LIVE } = require('../services/geocoder');
 
-/* GET /api/geocode?q=Pune */
 router.get('/', async (req, res, next) => {
   const q = (req.query.q || '').trim();
   if (!q) return res.status(400).json({ error: 'Query parameter q is required' });
@@ -18,7 +13,6 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-/* GET /api/geocode/status */
 router.get('/status', (req, res) => {
   res.json({
     live       : LIVE,

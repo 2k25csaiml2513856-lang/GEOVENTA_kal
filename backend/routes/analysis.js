@@ -1,9 +1,3 @@
-/* =====================================================================
-   routes/analysis.js — POST /api/analysis/run
-   Orchestrates the full MCDA pipeline:
-   geocode → generate zones → demographics →
-   land valuation → MCDA scoring → forecast → narrative
-   ===================================================================== */
 
 const express     = require('express');
 const router      = express.Router();
@@ -15,7 +9,6 @@ const { normalizeZones, scoreZones, gradeFromScore }                       = req
 const { buildAllForecasts }                                                = require('../services/forecast');
 const { generateSiteNarrative }                                            = require('../services/narrative');
 
-/* ── Validation helpers ─────────────────────────────────────────────── */
 function validateInput(body) {
   const errors = [];
   if (!body.targetLocation) errors.push('targetLocation is required');
@@ -24,7 +17,6 @@ function validateInput(body) {
   return errors;
 }
 
-/* ── POST /api/analysis/run ─────────────────────────────────────────── */
 router.post('/run', async (req, res, next) => {
   try {
     const {
@@ -39,23 +31,23 @@ router.post('/run', async (req, res, next) => {
       weights        = { population: 30, supplyDemand: 25, competition: 20, landCost: 25 }
     } = req.body;
 
-    // --- Validate ---
+    
     const errors = validateInput(req.body);
     if (errors.length) return res.status(400).json({ error: errors.join('; ') });
 
-    // ── Step 1: Geocode target location ──
+    
     const center = await geocodeLocation(targetLocation);
 
-    // ── Step 2: Generate candidate zones ──
+    
     const zones = await generateCandidateZones(center, searchRadius, numZones);
 
-    // ── Step 3: Get city profile for tier info ──
+    
     const cityProfile = getCityProfile(targetLocation);
 
-    // ── Step 4: Generate demographics per zone ──
+    
     const demos = generateZoneDemographics(zones.map(z => z.name), targetLocation, businessType);
 
-    // ── Step 5: Estimate land cost per zone ──
+    
     const withCosts = zones.map((zone, i) => {
       const { cost, ratePerSqft } = estimateLandCost(zone.name, cityProfile.tier || 2, businessType, requiredArea);
       const fit = budgetFit(cost, monthlyBudget);
@@ -68,21 +60,21 @@ router.post('/run', async (req, res, next) => {
       };
     });
 
-    // ── Step 6: Count nearby competitors (async, parallelized) ──
+    
     await Promise.all(withCosts.map(async (z) => {
       z.competition = await countNearbyCompetitors(z.lat, z.lng, businessType);
     }));
 
-    // ── Step 7: Normalize factors ──
+    
     const normalized = normalizeZones(withCosts);
 
-    // ── Step 8: MCDA scoring ──
+    
     const scored = scoreZones(normalized, weights);
 
-    // ── Step 9: Forecasts ──
+    
     const withForecasts = buildAllForecasts(scored, forecastYears);
 
-    // ── Step 10: Narrative for top site ──
+    
     const topSite = withForecasts[0];
     const narrative = generateSiteNarrative(topSite, {
       businessType,
@@ -92,7 +84,7 @@ router.post('/run', async (req, res, next) => {
       radiusKm: searchRadius
     });
 
-    // ── Response ──
+    
     res.json({
       success    : true,
       meta: {
@@ -117,26 +109,26 @@ router.post('/run', async (req, res, next) => {
         score        : s.score,
         grade        : gradeFromScore(s.score),
         contrib      : s.contrib,
-        // Raw dimensions
+        
         population   : s.population,
         supplyDemand : s.supplyDemand,
         competition  : s.competition,
         landCost     : s.landCost,
         ratePerSqft  : s.ratePerSqft,
         medianIncome : s.medianIncome,
-        // Budget
+        
         budgetFit        : s.budgetFit,
         overageRatio     : s.overageRatio,
         utilizationPct   : s.utilizationPct,
-        // Normalized (for radar)
+        
         normalized       : s.normalized,
-        // Forecast
+        
         forecast         : s.forecast,
-        // Distance
+        
         distFromCenter   : s.distFromCenter,
         growthRate       : s.growthRate
       })),
-      narrative  // Only for top site
+      narrative  
     });
 
   } catch (err) {
@@ -144,7 +136,6 @@ router.post('/run', async (req, res, next) => {
   }
 });
 
-/* ── GET /api/analysis/factors ─────────────────────────────────────── */
 router.get('/factors', (req, res) => {
   res.json([
     { id: 'population',   name: 'Population Density',   type: 'benefit', unit: 'residents/km²',   default: 30 },
