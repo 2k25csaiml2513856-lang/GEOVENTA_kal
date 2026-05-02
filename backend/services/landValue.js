@@ -1,11 +1,8 @@
-
-
 const TIER_SQFT_RATE = {
   1: { min: 80,  max: 250 },  
   2: { min: 40,  max: 120 },  
   3: { min: 20,  max: 70  }   
 };
-
 
 const ZONE_PREMIUM = {
   'downtown core'        : 2.2,
@@ -17,7 +14,6 @@ const ZONE_PREMIUM = {
   'east suburbs'         : 0.9,
   'south industrial'     : 0.6
 };
-
 
 const BUSINESS_PREMIUM = {
   restaurant  : 1.5,

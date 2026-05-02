@@ -1,5 +1,3 @@
-
-
 const CITY_PROFILES = {
   'pune'       : { basePopDensity: 5765, medianIncome: 42000, growthRate: 0.068, tier: 1 },
   'mumbai'     : { basePopDensity: 20667, medianIncome: 55000, growthRate: 0.05,  tier: 1 },
@@ -16,7 +14,6 @@ const CITY_PROFILES = {
   'default'    : { basePopDensity: 3500, medianIncome: 25000, growthRate: 0.045, tier: 3 }
 };
 
-
 const ZONE_MODIFIERS = {
   'downtown core'           : { pop: 1.4, demand: 1.6, comp: 1.8 },
   'north district'          : { pop: 1.1, demand: 1.1, comp: 1.0 },
@@ -27,7 +24,6 @@ const ZONE_MODIFIERS = {
   'university belt'         : { pop: 1.6, demand: 1.3, comp: 1.2 },
   'old city'                : { pop: 1.2, demand: 1.0, comp: 1.4 },
 };
-
 
 const BUSINESS_DEMAND = {
   restaurant  : { popWeight: 1.5, minDensity: 3000, idealIncome: 40000 },
@@ -57,19 +53,15 @@ function generateZoneDemographics(zones, locationStr, businessType) {
     const mod  = Object.entries(ZONE_MODIFIERS).find(([k]) => zKey.includes(k))?.[1]
                  || { pop: 1.0, demand: 1.0, comp: 1.0 };
 
-    
     const noise = () => (Math.random() + Math.random() + Math.random() - 1.5) * 0.15;
 
     const popDensity     = Math.round(city.basePopDensity * mod.pop * (1 + noise()));
     const medianIncome   = Math.round(city.medianIncome   * (1 + noise() * 0.5));
 
-    
-    
     const popScore  = Math.min(popDensity / (bizMeta.minDensity * 2), 1);
     const incomeAdj = medianIncome / bizMeta.idealIncome;
     const supplyDemand = Math.max(0, Math.min(1, (popScore * bizMeta.popWeight * 0.5 + incomeAdj * 0.5) * mod.demand * (1 + noise() * 0.2)));
 
-    
     const baseComp   = Math.round(12 * mod.comp * (1 + noise()));
     const competition = Math.max(0, baseComp);
 

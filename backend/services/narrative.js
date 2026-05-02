@@ -1,3 +1,4 @@
+const fetch = require('node-fetch');
 
 const BUSINESS_LABELS = {
   restaurant  : 'Restaurant / Café',
@@ -24,7 +25,61 @@ const SCORE_DESCRIPTOR = (score) => {
   return               { adj: 'cautious', strength: 'limited' };
 };
 
-function generateSiteNarrative(site, input) {
+async function generateSiteNarrative(site, input) {
+  const promptText = `You are an expert commercial real estate AI analyst. Based on the provided site metrics, generate a professional, structured executive summary in exactly 3 sections. Return a JSON array of objects with keys 'heading' and 'body'. The body should contain HTML formatting like <strong> where appropriate.
+  
+Analyze this site:
+Business: ${BUSINESS_LABELS[input.businessType] || input.businessType}
+Zone: ${site.zone}
+Overall Score: ${site.score}/100
+Land Cost: ₹${site.landCost}/mo
+Budget: ₹${input.monthlyBudget}/mo
+Competitors: ${site.competition}
+Population Density: ${site.population} /km²
+CAGR: ${site.forecast?.cagr}%`;
+
+  // 1. Groq (Free Fast LLM)
+  if (process.env.GROQ_API_KEY) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+        body: JSON.stringify({
+          model: "llama3-8b-8192",
+          messages: [{ role: "user", content: promptText }],
+          temperature: 0.3
+        })
+      });
+      const json = await response.json();
+      if (json.choices && json.choices.length > 0) {
+        let content = json.choices[0].message.content;
+        const match = content.match(/\[.*\]/s);
+        return JSON.parse(match ? match[0] : content);
+      }
+    } catch (e) { console.error("Groq failed, falling back:", e.message); }
+  }
+
+  // 2. Google Gemini (Free Tier)
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: promptText }] }],
+          generationConfig: { temperature: 0.3 }
+        })
+      });
+      const json = await response.json();
+      if (json.candidates && json.candidates.length > 0) {
+        let content = json.candidates[0].content.parts[0].text;
+        const match = content.match(/\[.*\]/s);
+        return JSON.parse(match ? match[0] : content);
+      }
+    } catch (e) { console.error("Gemini failed, falling back:", e.message); }
+  }
+
+  // Fallback to rules-based template
   const bLabel  = BUSINESS_LABELS[input.businessType] || 'Business';
   const compAdj = COMPETITION_ADJECTIVE(site.competition);
   const desc    = SCORE_DESCRIPTOR(site.score);

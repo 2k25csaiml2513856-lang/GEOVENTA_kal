@@ -1,45 +1,3 @@
-
-(function authGuard() {
-  const token = localStorage.getItem('gv_token') || sessionStorage.getItem('gv_token');
-  if (!token) {
-    window.location.href = '/login.html';
-    return;
-  }
-  
-  fetch('/api/auth/verify', { headers: { 'Authorization': `Bearer ${token}` } })
-    .then(r => {
-      if (!r.ok && token !== 'demo') window.location.href = '/login.html';
-      else if (r.ok) r.json().then(d => injectUserGreeting(d.user));
-    })
-    .catch(() => {  });
-})();
-
-function injectUserGreeting(user) {
-  if (!user) return;
-  const nav = document.querySelector('.topnav');
-  if (!nav) return;
-  const greeting = document.createElement('div');
-  greeting.style.cssText = 'margin-left:auto;display:flex;align-items:center;gap:10px;';
-  greeting.innerHTML = `
-    <span style="font-size:0.8rem;color:var(--text-3)">Hi, <strong style="color:var(--text-2)">${user.firstName || user.email}</strong></span>
-    <button onclick="logout()" style="padding:5px 12px;border-radius:8px;background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.25);color:#f43f5e;font-size:0.78rem;font-weight:600;cursor:pointer;">Sign Out</button>
-  `;
-  nav.appendChild(greeting);
-}
-
-function logout() {
-  localStorage.removeItem('gv_token');
-  localStorage.removeItem('gv_user');
-  sessionStorage.removeItem('gv_token');
-  sessionStorage.removeItem('gv_user');
-  window.location.href = '/login.html';
-}
-
-function authHeader() {
-  const token = localStorage.getItem('gv_token') || sessionStorage.getItem('gv_token') || '';
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
-}
-
 const API_BASE = '/api';   
 
 const state = {
@@ -49,7 +7,9 @@ const state = {
   meta           : {},
   mapMode        : 'score',
   serverOnline   : false,
-  chartInstances : { radar: null, forecast: null }
+  chartInstances : { radar: null, forecast: null },
+  map            : null,
+  mapLayers      : []
 };
 
 const FACTORS = [
@@ -85,7 +45,6 @@ async function checkServerStatus() {
     const json = await res.json();
     state.serverOnline = json.status === 'OK';
 
-    
     if (state.serverOnline) {
       setStatus('form-status', '✅ Backend API connected — full-stack mode active', 'var(--emerald)');
       if (json.mapsKey) {
@@ -143,7 +102,6 @@ function rebalanceWeights(changedId) {
     weights[otherIds[0]] += drift;
   }
 
-  
   FACTORS.forEach(f => {
     const v = Math.max(0, weights[f.id]);
     const badge  = document.getElementById(`val-${f.id}`);
@@ -172,22 +130,26 @@ function attachFormEvents() {
       FACTORS.forEach(f => rebalanceWeights(f.id));
     });
 
-  
   ['score', 'density', 'competition'].forEach(mode => {
     document.getElementById(`view-${mode}`)
       ?.addEventListener('click', () => {
-        document.querySelectorAll('.map-ctrl-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(`view-${mode}`).classList.add('active');
         state.mapMode = mode;
-        drawMapCanvas();
+        renderMap();
         const lm = document.getElementById('legend-metric');
         if (lm) lm.textContent = mode.toUpperCase();
       });
   });
 
-  
   document.getElementById('radar-site-select')
     ?.addEventListener('change', e => selectSite(e.target.value));
+
+  document.getElementById('export-pdf-btn')
+    ?.addEventListener('click', exportToPDF);
+
+  document.getElementById('save-project-btn')
+    ?.addEventListener('click', saveProject);
 }
 
 async function runAnalysis() {
@@ -203,7 +165,7 @@ async function runAnalysis() {
       
       const res  = await fetch(`${API_BASE}/analysis/run`, {
         method  : 'POST',
-        headers : { 'Content-Type': 'application/json', ...authHeader() },
+        headers : { 'Content-Type': 'application/json' },
         body    : JSON.stringify(payload)
       });
 
@@ -229,7 +191,12 @@ async function runAnalysis() {
     renderAll();
 
     setStatus('form-status', `✅ Analysis complete — ${sites.length} zones ranked`, 'var(--emerald)');
-    document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+
+    const syncEl = document.getElementById('sb-last-sync');
+    if (syncEl) {
+      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      syncEl.textContent = `Last analysis: ${now}`;
+    }
 
   } catch (err) {
     console.error(err);
@@ -283,7 +250,6 @@ function clientSideEngine(p) {
              distFromCenter: parseFloat(dist.toFixed(2)) };
   });
 
-  
   const dims = ['population','supplyDemand','competition','landCost'];
   const ranges = {};
   dims.forEach(d => {
@@ -300,7 +266,6 @@ function clientSideEngine(p) {
     return { ...z, normalized: norm };
   });
 
-  
   const wTotal = Object.values(p.weights).reduce((a, b) => a + b, 0);
   const scored = normalized.map(z => {
     const n    = z.normalized;
@@ -328,7 +293,6 @@ function clientSideEngine(p) {
     s.forecast = buildForecastClient(s, p.forecastYears);
   });
 
-  
   const top = scored[0];
   const narrative = [
     { heading: 'Top Recommendation', body: `<strong>${top.zone}</strong> scores <strong>${top.score}/100</strong> — Rank #1 among ${scored.length} zones.` },
@@ -369,13 +333,35 @@ function buildForecastClient(site, years) {
 
 function renderAll() {
   renderRankings();
-  setupMapCanvas();
+  renderMap();
   updateMapSiteList();
   renderNarrative();
 
   if (state.sites.length > 0) {
     selectSite(state.sites[0].id);
     document.getElementById('map-legend').style.display = 'flex';
+    renderBestSiteHero(state.sites[0]);
+  } else {
+    document.getElementById('best-site-hero').style.display = 'none';
+  }
+}
+
+function renderBestSiteHero(site) {
+  const hero = document.getElementById('best-site-hero');
+  if (!hero) return;
+  hero.style.display = 'flex';
+  document.getElementById('hero-name').textContent = site.zone;
+  document.getElementById('hero-score').textContent = site.score;
+  
+  const topFactor = Object.entries(site.contrib || {}).sort((a,b) => b[1] - a[1])[0];
+  const factorLabels = { population: 'High Density', supplyDemand: 'Strong Demand', competition: 'Low Competition', landCost: 'Best Value' };
+  document.getElementById('hero-reason').textContent = `Excellent ${factorLabels[topFactor[0]] || 'profile'}`;
+}
+
+function scrollToTopResult() {
+  const container = document.getElementById('ranked-results');
+  if (container) {
+    container.scrollTo({ left: 0, behavior: 'smooth' });
   }
 }
 
@@ -384,15 +370,18 @@ function renderRankings() {
   if (!container) return;
   container.innerHTML = '';
 
+  const metaEl = document.getElementById('results-meta');
+  if (metaEl) metaEl.textContent = `${state.sites.length} sites found in ${state.meta.targetLocation}`;
+
   state.sites.forEach(site => {
     const g = site.grade || gradeClient(site.score);
     const ringCircumference = 2 * Math.PI * 28;
     const ringOffset        = ringCircumference * (1 - site.score / 100);
 
-    let ringColor = '#f43f5e';
-    if (site.score >= 80) ringColor = '#10b981';
-    else if (site.score >= 65) ringColor = '#06b6d4';
-    else if (site.score >= 48) ringColor = '#f59e0b';
+    let ringColor = '#D9480F';
+    if (site.score >= 80) ringColor = '#1D9E75';
+    else if (site.score >= 65) ringColor = '#185FA5';
+    else if (site.score >= 48) ringColor = '#EF9F27';
 
     const budgetTag = site.budgetFit
       ? `<span style="color:var(--emerald)">✅ Within budget</span>`
@@ -462,158 +451,149 @@ function renderFactorBars(site) {
   `).join('');
 }
 
-/* ── Site selection ──────────────────────────────────────────────────── */
-function selectSite(siteId) {
-  if (!siteId) return;
-  state.selectedSiteId = siteId;
-  const site = state.sites.find(s => s.id === siteId);
+function selectSite(id) {
+  state.selectedSiteId = id;
+  const site = state.sites.find(s => s.id === id);
   if (!site) return;
 
-  document.querySelectorAll('.result-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById(`rc-${siteId}`)?.classList.add('selected');
-  document.querySelectorAll('.site-item').forEach(c => c.classList.remove('active'));
-  document.getElementById(`li-${siteId}`)?.classList.add('active');
-
   const sel = document.getElementById('radar-site-select');
-  if (sel) sel.value = siteId;
+  if (sel) sel.value = id;
 
-  drawMapCanvas();
+  renderMap();
+  renderMiniMap(site);
   renderRadarChart(site);
   renderForecastChart(site);
+  renderVenueImage(site);
+
+  document.querySelectorAll('.result-card').forEach(c => c.classList.toggle('selected', c.id === `rc-${id}`));
+  document.querySelectorAll('.site-item').forEach(c => c.classList.toggle('active', c.id === `li-${id}`));
 }
 
-function setupMapCanvas() {
-  const stage = document.getElementById('map-stage');
-  if (!stage) return;
-  stage.innerHTML = '<canvas id="map-canvas" style="width:100%;height:100%;display:block;"></canvas>';
-  const stage_r = stage.getBoundingClientRect();
-  const canvas  = document.getElementById('map-canvas');
-  const dpr     = window.devicePixelRatio || 1;
-  canvas.width  = stage_r.width  * dpr;
-  canvas.height = stage_r.height * dpr;
-  canvas.style.width  = stage_r.width  + 'px';
-  canvas.style.height = stage_r.height + 'px';
-  drawMapCanvas();
+function renderVenueImage(site) {
+  const vs = document.getElementById('venue-section');
+  const img = document.getElementById('venue-image');
+  const title = document.getElementById('venue-title');
+  if (!vs || !img) return;
+
+  vs.style.display = 'block';
+  
+  img.style.transform = 'scale(1.1)';
+  setTimeout(() => img.style.transform = 'scale(1)', 50);
+
+  const bType = getVal('business-type', 'restaurant');
+  let url = '';
+  
+  if (bType.includes('restaurant')) url = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80';
+  else if (bType.includes('fashion') || bType.includes('retail')) url = 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=800&q=80';
+  else if (bType.includes('gym')) url = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80';
+  else if (bType.includes('grocery')) url = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80';
+  else url = 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80';
+
+  img.src = url;
+  if(title) title.textContent = `${site.zone} Concept`;
 }
 
-function drawMapCanvas() {
-  const canvas = document.getElementById('map-canvas');
-  if (!canvas || !state.sites.length) return;
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const W   = canvas.width;
-  const H   = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-
+function renderMiniMap(site) {
+  const section = document.getElementById('mini-map-section');
+  const iframe = document.getElementById('mini-map-iframe');
+  if (!section || !iframe) return;
   
-  ctx.strokeStyle = 'rgba(99,102,241,0.06)';
-  ctx.lineWidth   = 1;
-  for (let x = 0; x < W; x += 40 * dpr) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-  for (let y = 0; y < H; y += 40 * dpr) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  section.style.display = 'block';
 
-  
-  const lats = state.sites.map(s => s.lat);
-  const lngs = state.sites.map(s => s.lng);
-  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-  const pad = 0.12;
+  const url = `https://www.openstreetmap.org/export/embed.html?bbox=${site.lng-0.005},${site.lat-0.003},${site.lng+0.005},${site.lat+0.003}&layer=mapnik&marker=${site.lat},${site.lng}`;
+  iframe.src = url;
+}
 
-  function project(lat, lng) {
-    const nx = (lng - minLng) / (maxLng - minLng || 1);
-    const ny = (lat - minLat) / (maxLat - minLat || 1);
-    return {
-      x: (pad + nx * (1 - 2 * pad)) * W,
-      y: ((1 - pad) - ny * (1 - 2 * pad)) * H
-    };
+function renderMap() {
+  if (!state.sites.length) return;
+  const msg = document.getElementById('map-empty-msg');
+  if (msg) msg.style.display = 'none';
+
+  const mapContainer = document.getElementById('real-map');
+  if (!mapContainer) return;
+
+  if (!state.map) {
+    state.map = L.map('real-map', { 
+      zoomControl: false,
+      fadeAnimation: true,
+      markerZoomAnimation: true
+    }).setView([state.sites[0].lat, state.sites[0].lng], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(state.map);
+    L.control.zoom({ position: 'bottomright' }).addTo(state.map);
+
+    const drawnItems = new L.FeatureGroup();
+    state.map.addLayer(drawnItems);
+    const drawControl = new L.Control.Draw({
+      edit: { featureGroup: drawnItems },
+      draw: { marker: false, circlemarker: false, polyline: false }
+    });
+    state.map.addControl(drawControl);
+    state.map.on(L.Draw.Event.CREATED, function (event) {
+      drawnItems.addLayer(event.layer);
+    });
+  } else {
+
+    state.map.setView([state.sites[0].lat, state.sites[0].lng]);
   }
 
-  
-  ctx.strokeStyle = 'rgba(99,102,241,0.12)';
-  ctx.lineWidth   = 1.5 * dpr;
-  ctx.setLineDash([4 * dpr, 6 * dpr]);
-  ctx.beginPath();
-  state.sites.forEach((s, i) => {
-    const p = project(s.lat, s.lng);
-    i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
-  });
-  ctx.closePath();
-  ctx.stroke();
-  ctx.setLineDash([]);
+  setTimeout(() => {
+    state.map.invalidateSize();
+  }, 100);
 
-  
+  state.mapLayers.forEach(layer => state.map.removeLayer(layer));
+  state.mapLayers = [];
+
+  const bounds = L.latLngBounds();
+
   state.sites.forEach(site => {
-    const p          = project(site.lat, site.lng);
     const isSelected = site.id === state.selectedSiteId;
-    const n          = site.normalized || {};
-
+    const n = site.normalized || {};
     let color = '#64748b';
-    let radius;
+    let radius = 15;
 
     if (state.mapMode === 'score') {
-      radius = (7 + (site.score / 100) * 14) * dpr;
       if (site.score >= 80) color = '#10b981';
       else if (site.score >= 65) color = '#06b6d4';
       else if (site.score >= 48) color = '#f59e0b';
       else color = '#f43f5e';
     } else if (state.mapMode === 'density') {
       const v = n.population ?? 0.5;
-      radius  = (6 + v * 16) * dpr;
-      color   = `hsl(${195 + v * 60}, 80%, ${50 + v * 20}%)`;
+      color = `hsl(${195 + v * 60}, 80%, 50%)`;
     } else {
       const v = n.competition ?? 0.5;
-      radius  = (6 + v * 16) * dpr;
-      color   = `hsl(${360 - v * 60}, 80%, ${45 + v * 15}%)`;
+      color = `hsl(${360 - v * 60}, 80%, 45%)`;
     }
 
-    if (isSelected) radius += 5 * dpr;
+    const marker = L.circleMarker([site.lat, site.lng], {
+      radius: isSelected ? 18 : 12,
+      fillColor: color,
+      color: isSelected ? '#1e293b' : '#fff',
+      weight: isSelected ? 3 : 2,
+      opacity: 1,
+      fillOpacity: 0.8
+    }).addTo(state.map);
 
-    
-    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 3);
-    grad.addColorStop(0, color + '55');
-    grad.addColorStop(1, color + '00');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, radius * 3, 0, Math.PI * 2);
-    ctx.fill();
+    marker.bindTooltip(`<strong>#${site.rank} ${site.zone}</strong><br>Score: ${site.score}`, {
+      permanent: false,
+      direction: 'top'
+    });
 
-    
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    
-    if (isSelected) {
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth   = 2.5 * dpr;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, radius + 4 * dpr, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    
-    ctx.fillStyle   = '#f1f5f9';
-    ctx.font        = `${isSelected ? 'bold ' : ''}${11 * dpr}px 'Inter', sans-serif`;
-    ctx.textAlign   = 'center';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur  = 4 * dpr;
-    ctx.fillText(site.zone, p.x, p.y - radius - 7 * dpr);
-    ctx.shadowBlur  = 0;
-
-    
-    if (state.mapMode === 'score') {
-      ctx.fillStyle = color;
-      ctx.font      = `bold ${10 * dpr}px 'Space Grotesk', sans-serif`;
-      ctx.fillText(site.score, p.x, p.y + 3 * dpr);
-    }
+    marker.on('click', () => selectSite(site.id));
+    state.mapLayers.push(marker);
+    bounds.extend([site.lat, site.lng]);
   });
+
+  state.map.fitBounds(bounds, { padding: [50, 50] });
 }
 
 function updateMapSiteList() {
   const list   = document.getElementById('site-list');
   const selBox = document.getElementById('radar-site-select');
-  if (!list) return;
-  list.innerHTML = '';
+  
+  if (list) list.innerHTML = '';
   if (selBox) selBox.innerHTML = '<option value="">— select zone —</option>';
 
   state.sites.forEach(site => {
@@ -631,7 +611,7 @@ function updateMapSiteList() {
       <span class="site-score-sm" style="color:${color}">${site.score}</span>
     `;
     div.addEventListener('click', () => selectSite(site.id));
-    list.appendChild(div);
+    if (list) list.appendChild(div);
 
     if (selBox) {
       const opt   = document.createElement('option');
@@ -642,9 +622,6 @@ function updateMapSiteList() {
   });
 }
 
-/* ===========================================================
-   RADAR CHART
-   =========================================================== */
 function renderRadarChart(site) {
   if (!window.Chart) return;
   const ctx = document.getElementById('radar-canvas')?.getContext('2d');
@@ -703,9 +680,6 @@ function renderRadarChart(site) {
   });
 }
 
-/* ===========================================================
-   FORECAST CHART
-   =========================================================== */
 function renderForecastChart(site) {
   if (!window.Chart || !site.forecast) return;
   const ctx = document.getElementById('forecast-canvas')?.getContext('2d');
@@ -713,21 +687,20 @@ function renderForecastChart(site) {
 
   const fc = site.forecast;
 
-  // Update summary tiles
   const sumDiv = document.getElementById('forecast-summary');
   if (sumDiv) {
     sumDiv.innerHTML = `
       <div class="fs-item">
         <strong>₹${fc.currentCost.toLocaleString()}</strong>
-        <span>Current Cost / mo</span>
+        <span>Current Cost</span>
       </div>
       <div class="fs-item">
-        <strong>${fc.cagr}%</strong>
+        <strong style="color:var(--indigo)">${fc.cagr}%</strong>
         <span>Est. CAGR</span>
       </div>
       <div class="fs-item">
-        <strong>₹${fc.projectedCost.toLocaleString()}</strong>
-        <span>Yr ${fc.horizonYears} Projection</span>
+        <strong style="color:var(--emerald)">${fc.confidenceScore}%</strong>
+        <span>Confidence</span>
       </div>
     `;
   }
@@ -810,25 +783,24 @@ function renderForecastChart(site) {
     }
   });
 
-  // Forecast details
   const fdDiv = document.getElementById('forecast-details');
   if (fdDiv) {
     fdDiv.innerHTML = `
       <div class="fd-item">
-        <strong>Annual Growth Rate</strong>
-        <span>${fc.annualGrowthRate}% blended (score + city base + demand pressure)</span>
+        <strong>Forecast Stability</strong>
+        <span>${fc.confidenceScore > 90 ? 'High' : fc.confidenceScore > 75 ? 'Moderate' : 'Volatile'} based on commercial density and market noise</span>
       </div>
       <div class="fd-item">
-        <strong>Total Return (${fc.horizonYears}yr)</strong>
-        <span>${fc.totalReturn}% over the forecast period</span>
+        <strong>CAGR Analysis</strong>
+        <span>${fc.cagr}% Compound Growth (Standard MCDA Projection)</span>
       </div>
       <div class="fd-item">
-        <strong>Confidence Band</strong>
-        <span>±${fc.riskBand}% at 95% confidence (volatility model)</span>
+        <strong>Projected Value (Yr ${fc.horizonYears})</strong>
+        <span>₹${fc.projectedCost.toLocaleString()} per month estimated lease</span>
       </div>
       <div class="fd-item">
-        <strong>Site Score Driver</strong>
-        <span>Higher MCDA score (${site.score}/100) amplifies appreciation forecast</span>
+        <strong>Risk Margin</strong>
+        <span>±${fc.riskBand}% variance at 95% confidence level</span>
       </div>
     `;
   }
@@ -837,9 +809,6 @@ function renderForecastChart(site) {
   if (metaEl) metaEl.textContent = `Showing ${fc.horizonYears}-year outlook for ${site.zone}`;
 }
 
-/* ===========================================================
-   NARRATIVE
-   =========================================================== */
 function renderNarrative() {
   const section = document.getElementById('narrative-section');
   const body    = document.getElementById('narrative-body');
@@ -852,9 +821,6 @@ function renderNarrative() {
   `).join('');
 }
 
-/* ===========================================================
-   FACTOR TABLE
-   =========================================================== */
 function initFactorTable() {
   const tbody = document.getElementById('factor-table-body');
   if (!tbody) return;
@@ -868,9 +834,6 @@ function initFactorTable() {
   `).join('');
 }
 
-/* ===========================================================
-   UI HELPERS
-   =========================================================== */
 function setLoading(on) {
   const btn     = document.getElementById('analyze-btn');
   const spinner = document.getElementById('analyze-spinner');
@@ -879,7 +842,7 @@ function setLoading(on) {
   btn.style.pointerEvents  = on ? 'none' : 'auto';
   btn.style.opacity        = on ? '0.75' : '1';
   spinner?.classList.toggle('active', on);
-  if (label) label.textContent = on ? 'Running Analysis…' : '⚡ Analyze Best Locations';
+  if (label) label.textContent = on ? 'Running Analysis…' : '⚡ Run Analysis';
 }
 
 function clearResults() {
@@ -905,8 +868,7 @@ function setText(id, text) {
 function setConnBadge(id, text, cls) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.textContent = text;
-  el.className   = `conn-badge ${cls}`;
+  el.className = `conn-dot ${cls}`;
 }
 
 function getVal(id, fallback = '') {
@@ -915,4 +877,28 @@ function getVal(id, fallback = '') {
 
 function getNum(id, fallback = 0) {
   return parseFloat(document.getElementById(id)?.value) || fallback;
+}
+
+function exportToPDF() {
+  if (!state.sites.length) return alert('Run analysis first to generate a report.');
+  const element = document.body;
+  const opt = {
+    margin:       0.5,
+    filename:     `GeoVenta_Report_${new Date().getTime()}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+  };
+  html2pdf().set(opt).from(element).save();
+}
+
+function saveProject() {
+  if (!state.sites.length) return alert('No analysis to save.');
+  const projectName = prompt('Enter project name:', `Analysis ${new Date().toLocaleDateString()}`);
+  if (!projectName) return;
+  
+  const projects = JSON.parse(localStorage.getItem('gv_projects') || '[]');
+  projects.push({ name: projectName, state: { sites: state.sites, meta: state.meta, narrative: state.narrative } });
+  localStorage.setItem('gv_projects', JSON.stringify(projects));
+  alert(`Project "${projectName}" saved successfully!`);
 }

@@ -1,8 +1,6 @@
-
 const fetch = require('node-fetch');
 
-const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
-const LIVE     = MAPS_KEY && MAPS_KEY !== 'your_google_maps_api_key_here';
+const LIVE = true; 
 
 const ZONE_TEMPLATES = [
   'Downtown Core',
@@ -18,92 +16,162 @@ const ZONE_TEMPLATES = [
 ];
 
 async function geocodeLocation(locationStr) {
-  if (!LIVE) {
-    
-    const mockCoords = {
-      pune      : { lat: 18.5204, lng: 74.8567 },
-      mumbai    : { lat: 19.0760, lng: 72.8777 },
-      bangalore : { lat: 12.9716, lng: 77.5946 },
-      hyderabad : { lat: 17.3850, lng: 78.4867 },
-      delhi     : { lat: 28.7041, lng: 77.1025 },
-      chennai   : { lat: 13.0827, lng: 80.2707 },
-      kolkata   : { lat: 22.5726, lng: 88.3639 },
-      ahmedabad : { lat: 23.0225, lng: 72.5714 },
-      jaipur    : { lat: 26.9124, lng: 75.7873 },
-      surat     : { lat: 21.1702, lng: 72.8311 },
-    };
-    const lower = (locationStr || '').toLowerCase();
-    for (const [city, coord] of Object.entries(mockCoords)) {
-      if (lower.includes(city)) return { ...coord, formattedAddress: locationStr };
+
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationStr)}&format=json&limit=1`;
+  
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'GeoVenta-Site-Selector/1.0' }
+    });
+    const json = await res.json();
+
+    if (!json || !json.length) {
+      throw new Error(`Geocoding failed for: ${locationStr}`);
     }
-    return { lat: 18.5204, lng: 74.8567, formattedAddress: locationStr }; // Default Pune
+
+    const result = json[0];
+    return {
+      lat: parseFloat(result.lat),
+      lng: parseFloat(result.lon),
+      formattedAddress: result.display_name
+    };
+  } catch (err) {
+    console.error('[OSM Geocode Error]', err.message);
+
+    return { lat: 18.5204, lng: 73.8567, formattedAddress: 'Pune, Maharashtra (Fallback)' };
   }
-
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(locationStr)}&key=${MAPS_KEY}`;
-  const res  = await fetch(url);
-  const json = await res.json();
-
-  if (json.status !== 'OK' || !json.results.length) {
-    throw new Error(`Geocoding failed: ${json.status}`);
-  }
-
-  const loc = json.results[0].geometry.location;
-  return {
-    lat              : loc.lat,
-    lng              : loc.lng,
-    formattedAddress : json.results[0].formatted_address
-  };
 }
 
-async function generateCandidateZones(center, radiusKm, numZones = 6) {
-  const zones = [];
-  const selectedTemplates = ZONE_TEMPLATES.slice(0, numZones);
+async function reverseGeocode(lat, lng) {
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=14`;
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'GeoVenta-Site-Selector/1.0' }
+    });
+    const json = await res.json();
 
+    const addr = json.address;
+    return addr.suburb || addr.neighbourhood || addr.residential || addr.quarter || addr.village || addr.town || addr.city_district || addr.city || 'Selected Zone';
+  } catch (err) {
+    return null;
+  }
+}
+
+async function generateCandidateZones(center, radiusKm, numZones = 10) {
+
+  const radiusM = radiusKm * 1000;
+  const overpassQuery = `[out:json][timeout:25];
+    (
+      node["shop"](around:${radiusM},${center.lat},${center.lng});
+      node["amenity"="restaurant"](around:${radiusM},${center.lat},${center.lng});
+      node["office"](around:${radiusM},${center.lat},${center.lng});
+    );
+    out body 20;`;
+
+  const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
   
-  selectedTemplates.forEach((name, i) => {
-    const angleDeg  = (360 / numZones) * i;
-    const angleRad  = (angleDeg * Math.PI) / 180;
-    const distKm    = radiusKm * (0.4 + Math.random() * 0.6);   
-    const deltaLat  = (distKm / 111) * Math.cos(angleRad);
-    const deltaLng  = (distKm / (111 * Math.cos((center.lat * Math.PI) / 180))) * Math.sin(angleRad);
+  try {
+    const res = await fetch(url);
+    const json = await res.json();
+    
+    let candidates = json.elements || [];
+
+    if (candidates.length < 3) {
+      return fallbackZones(center, radiusKm, numZones);
+    }
+
+    candidates = candidates.sort(() => 0.5 - Math.random()).slice(0, numZones);
+
+    const results = [];
+    for (const c of candidates) {
+      const lat = c.lat;
+      const lng = c.lon;
+      const shopName = c.tags.name || c.tags.shop || c.tags.amenity || 'Commercial Zone';
+      
+      const realName = await reverseGeocode(lat, lng);
+      const dist = calculateDistance(center.lat, center.lng, lat, lng);
+
+      results.push({
+        name: realName || shopName, // Prioritize location name over shop name
+        lat: lat,
+        lng: lng,
+        distFromCenter: parseFloat(dist.toFixed(2))
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+
+    return results;
+  } catch (err) {
+    console.warn('[Overpass Candidates Error]', err.message);
+    return fallbackZones(center, radiusKm, numZones);
+  }
+}
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function fallbackZones(center, radiusKm, numZones) {
+  const zones = [];
+  const templates = ZONE_TEMPLATES.slice(0, numZones);
+
+  templates.forEach((name, i) => {
+    const angleDeg = (360 / numZones) * i;
+    const angleRad = (angleDeg * Math.PI) / 180;
+    const distKm = radiusKm * (0.4 + Math.random() * 0.6);
+    const deltaLat = (distKm / 111) * Math.cos(angleRad);
+    const deltaLng = (distKm / (111 * Math.cos((center.lat * Math.PI) / 180))) * Math.sin(angleRad);
 
     zones.push({
-      name   : name,
-      lat    : parseFloat((center.lat + deltaLat).toFixed(6)),
-      lng    : parseFloat((center.lng + deltaLng).toFixed(6)),
+      name: name,
+      lat: parseFloat((center.lat + deltaLat).toFixed(6)),
+      lng: parseFloat((center.lng + deltaLng).toFixed(6)),
       distFromCenter: parseFloat(distKm.toFixed(2))
     });
   });
-
   return zones;
 }
 
 async function countNearbyCompetitors(lat, lng, businessType, radiusM = 1500) {
-  if (!LIVE) {
-    
-    return Math.round(3 + Math.random() * 18);
-  }
 
-  
   const typeMap = {
-    restaurant  : 'restaurant',
-    grocery     : 'grocery_or_supermarket',
-    pharmacy    : 'pharmacy',
-    fashion     : 'clothing_store',
-    electronics : 'electronics_store',
-    warehouse   : 'storage',
-    coworking   : 'coworking_space',
-    gym         : 'gym'
+    restaurant: 'node["amenity"="restaurant"]',
+    grocery: 'node["shop"="supermarket"]',
+    pharmacy: 'node["amenity"="pharmacy"]',
+    fashion: 'node["shop"="clothes"]',
+    electronics: 'node["shop"="electronics"]',
+    warehouse: 'node["industrial"="warehouse"]',
+    coworking: 'node["office"="coworking"]',
+    gym: 'node["leisure"="fitness_centre"]'
   };
 
-  const placeType = typeMap[businessType] || 'establishment';
-  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radiusM}&type=${placeType}&key=${MAPS_KEY}`;
+  const osmQueryPart = typeMap[businessType] || 'node["amenity"]';
+  const overpassQuery = `[out:json][timeout:25];
+    (
+      ${osmQueryPart}(around:${radiusM},${lat},${lng});
+    );
+    out count;`;
+
+  const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
 
   try {
-    const res  = await fetch(url);
+    const res = await fetch(url);
     const json = await res.json();
-    return json.results ? json.results.length : Math.round(Math.random() * 10);
-  } catch {
+
+    if (json.elements && json.elements.length > 0) {
+      return parseInt(json.elements[0].tags.nodes) || 0;
+    }
+    return Math.round(Math.random() * 5); // Fallback
+  } catch (err) {
+    console.warn('[Overpass Error]', err.message);
     return Math.round(Math.random() * 10);
   }
 }

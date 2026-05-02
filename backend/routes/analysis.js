@@ -1,4 +1,3 @@
-
 const express     = require('express');
 const router      = express.Router();
 
@@ -27,27 +26,21 @@ router.post('/run', async (req, res, next) => {
       monthlyBudget  = 250000,
       requiredArea   = 1800,
       forecastYears  = 5,
-      numZones       = 6,
+      numZones       = 10,
       weights        = { population: 30, supplyDemand: 25, competition: 20, landCost: 25 }
     } = req.body;
 
-    
     const errors = validateInput(req.body);
     if (errors.length) return res.status(400).json({ error: errors.join('; ') });
 
-    
     const center = await geocodeLocation(targetLocation);
 
-    
     const zones = await generateCandidateZones(center, searchRadius, numZones);
 
-    
     const cityProfile = getCityProfile(targetLocation);
 
-    
     const demos = generateZoneDemographics(zones.map(z => z.name), targetLocation, businessType);
 
-    
     const withCosts = zones.map((zone, i) => {
       const { cost, ratePerSqft } = estimateLandCost(zone.name, cityProfile.tier || 2, businessType, requiredArea);
       const fit = budgetFit(cost, monthlyBudget);
@@ -60,21 +53,16 @@ router.post('/run', async (req, res, next) => {
       };
     });
 
-    
     await Promise.all(withCosts.map(async (z) => {
       z.competition = await countNearbyCompetitors(z.lat, z.lng, businessType);
     }));
 
-    
     const normalized = normalizeZones(withCosts);
 
-    
     const scored = scoreZones(normalized, weights);
 
-    
     const withForecasts = buildAllForecasts(scored, forecastYears);
 
-    
     const topSite = withForecasts[0];
     const narrative = generateSiteNarrative(topSite, {
       businessType,
@@ -84,7 +72,6 @@ router.post('/run', async (req, res, next) => {
       radiusKm: searchRadius
     });
 
-    
     res.json({
       success    : true,
       meta: {

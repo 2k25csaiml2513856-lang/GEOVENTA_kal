@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoVenta | AI Site Selection</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --indigo: #6366f1;
+      --cyan: #06b6d4;
+      --bg: #0f172a;
+    }
+    body, html { margin: 0; padding: 0; height: 100%; font-family: 'Inter', sans-serif; background: var(--bg); color: white; overflow: hidden; }
+    
+    .ambient { position: fixed; inset: 0; z-index: 0; background: radial-gradient(circle at 50% 50%, #1e1b4b 0%, var(--bg) 100%); }
+    .glow { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.4; animation: float 10s infinite alternate ease-in-out; }
+    .g1 { width: 600px; height: 600px; background: var(--indigo); top: -200px; left: -200px; }
+    .g2 { width: 500px; height: 500px; background: var(--cyan); bottom: -100px; right: -100px; animation-delay: -5s; }
+    
+    @keyframes float { from { transform: translate(0, 0); } to { transform: translate(100px, 50px); } }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+
+    .hero {
+      position: relative; z-index: 10;
+      height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+      padding: 0 20px;
+    }
+
+    h1 {
+      font-family: 'Space Grotesk', sans-serif; font-size: 5rem; margin: 0;
+      background: linear-gradient(135deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      animation: fadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+    p {
+      font-size: 1.5rem; color: #94a3b8; max-width: 600px; margin: 20px auto 40px;
+      opacity: 0; animation: fadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards;
+    }
+
+    .btn {
+      display: inline-block; padding: 18px 40px; font-size: 1.2rem; font-weight: 800; color: white;
+      text-decoration: none; border-radius: 50px;
+      background: linear-gradient(135deg, var(--indigo), var(--cyan));
+      box-shadow: 0 10px 30px rgba(99,102,241,0.4); transition: all 0.3s;
+      opacity: 0; animation: fadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.6s forwards;
+    }
+    .btn:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(99,102,241,0.6); }
+
+    .showcase {
+      margin-top: 60px; width: 100%; max-width: 1000px; height: 400px;
+      background: url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80') center/cover;
+      border-radius: 20px; border: 2px solid rgba(255,255,255,0.1);
+      box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+      opacity: 0; animation: fadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.9s forwards;
+      position: relative; overflow: hidden;
+    }
+    .showcase::after {
+      content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(15,23,42,1), transparent);
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient">
+    <div class="glow g1"></div>
+    <div class="glow g2"></div>
+  </div>
+
+  <div class="hero">
+    <h1>GeoVenta AI</h1>
+    <p>The enterprise-grade geospatial intelligence platform for automated site selection and financial forecasting.</p>
+    <a href="login.html" class="btn">Enter Platform →</a>
+    
+    <div class="showcase"></div>
+  </div>
+</body>
+</html>

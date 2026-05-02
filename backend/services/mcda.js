@@ -1,4 +1,3 @@
-
 function minMax(val, min, max) {
   if (max === min) return 0.5;
   return Math.max(0, Math.min(1, (val - min) / (max - min)));
@@ -39,8 +38,7 @@ function scoreZones(zones, weights) {
 
   const scored = zones.map(z => {
     const n = z.normalized;
-    
-    
+
     const contrib = {
       population   : n.population   * wNorm.population,
       supplyDemand : n.supplyDemand * wNorm.supplyDemand,
