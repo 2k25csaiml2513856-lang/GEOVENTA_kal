@@ -1,6 +1,7 @@
+
 const fetch = require('node-fetch');
 
-const LIVE = true; 
+const LIVE = true;
 
 const ZONE_TEMPLATES = [
   'Downtown Core',
@@ -15,50 +16,51 @@ const ZONE_TEMPLATES = [
   'Financial District'
 ];
 
-async function geocodeLocation(locationStr) {
+const GOOGLE_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
-  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationStr)}&format=json&limit=1`;
-  
+async function geocodeLocation(locationStr) {
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(locationStr)}&key=${GOOGLE_KEY}`;
+
   try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'GeoVenta-Site-Selector/1.0' }
-    });
+    const res = await fetch(url);
     const json = await res.json();
 
-    if (!json || !json.length) {
-      throw new Error(`Geocoding failed for: ${locationStr}`);
+    if (json.status !== 'OK' || !json.results.length) {
+      throw new Error(`Google Geocoding failed: ${json.status}`);
     }
 
-    const result = json[0];
+    const result = json.results[0];
     return {
-      lat: parseFloat(result.lat),
-      lng: parseFloat(result.lon),
-      formattedAddress: result.display_name
+      lat: result.geometry.location.lat,
+      lng: result.geometry.location.lng,
+      formattedAddress: result.formatted_address
     };
   } catch (err) {
-    console.error('[OSM Geocode Error]', err.message);
-
+    console.error('[Google Geocode Error]', err.message);
     return { lat: 18.5204, lng: 73.8567, formattedAddress: 'Pune, Maharashtra (Fallback)' };
   }
 }
 
 async function reverseGeocode(lat, lng) {
-  const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=14`;
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_KEY}`;
   try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'GeoVenta-Site-Selector/1.0' }
-    });
+    const res = await fetch(url);
     const json = await res.json();
-
-    const addr = json.address;
-    return addr.suburb || addr.neighbourhood || addr.residential || addr.quarter || addr.village || addr.town || addr.city_district || addr.city || 'Selected Zone';
+    if (json.status === 'OK' && json.results.length > 0) {
+      // Find the most relevant neighborhood or locality
+      const result = json.results[0];
+      const components = result.address_components;
+      const sub = components.find(c => c.types.includes('sublocality') || c.types.includes('neighborhood'));
+      const loc = components.find(c => c.types.includes('locality'));
+      return (sub ? sub.long_name : (loc ? loc.long_name : 'Selected Zone'));
+    }
+    return 'Selected Zone';
   } catch (err) {
-    return null;
+    return 'Selected Zone';
   }
 }
 
 async function generateCandidateZones(center, radiusKm, numZones = 10) {
-
   const radiusM = radiusKm * 1000;
   const overpassQuery = `[out:json][timeout:25];
     (
@@ -69,25 +71,28 @@ async function generateCandidateZones(center, radiusKm, numZones = 10) {
     out body 20;`;
 
   const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
-  
+
   try {
     const res = await fetch(url);
     const json = await res.json();
-    
+
     let candidates = json.elements || [];
 
+    // If no real candidates found, fallback to random points
     if (candidates.length < 3) {
       return fallbackZones(center, radiusKm, numZones);
     }
 
+    // Shuffle and pick top N
     candidates = candidates.sort(() => 0.5 - Math.random()).slice(0, numZones);
 
+    // To avoid "IP address problem" (429 rate limits), we process these sequentially with a small delay
     const results = [];
     for (const c of candidates) {
       const lat = c.lat;
       const lng = c.lon;
       const shopName = c.tags.name || c.tags.shop || c.tags.amenity || 'Commercial Zone';
-      
+
       const realName = await reverseGeocode(lat, lng);
       const dist = calculateDistance(center.lat, center.lng, lat, lng);
 
@@ -98,6 +103,7 @@ async function generateCandidateZones(center, radiusKm, numZones = 10) {
         distFromCenter: parseFloat(dist.toFixed(2))
       });
 
+      // 250ms delay between Nominatim calls to respect rate limits
       await new Promise(resolve => setTimeout(resolve, 250));
     }
 
@@ -112,10 +118,10 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
@@ -165,6 +171,7 @@ async function countNearbyCompetitors(lat, lng, businessType, radiusM = 1500) {
   try {
     const res = await fetch(url);
     const json = await res.json();
+
 
     if (json.elements && json.elements.length > 0) {
       return parseInt(json.elements[0].tags.nodes) || 0;

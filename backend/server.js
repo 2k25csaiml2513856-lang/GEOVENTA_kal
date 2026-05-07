@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express      = require('express');
 const cors         = require('cors');
 const morgan       = require('morgan');
@@ -33,7 +34,7 @@ app.get('/api/health', (req, res) => {
     status  : 'OK',
     version : '1.0.0',
     engine  : 'GeoVenta MCDA AI v1',
-    mapsMode: 'OpenStreetMap (Nominatim + Overpass)',
+    mapsMode: 'Google Maps API (Live Geocoding)',
     mapsKey : true, 
     auth    : 'JWT (bcrypt + jsonwebtoken)',
     time    : new Date().toISOString()
@@ -53,7 +54,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`\n🌐 GeoVenta API running → http://localhost:${PORT}`);
   console.log(`🔐 Auth:       ✅ JWT + bcrypt`);
-  console.log(`📡 Geospatial: ✅ OpenStreetMap ACTIVE (No Key Required)`);
+  console.log(`📡 Geospatial: ✅ Google Maps API ACTIVE`);
   console.log(`📊 MCDA Engine: ✅ READY`);
 });
 

@@ -9,7 +9,10 @@ const state = {
   serverOnline   : false,
   chartInstances : { radar: null, forecast: null },
   map            : null,
-  mapLayers      : []
+  mapLayers      : [],
+  user           : JSON.parse(localStorage.getItem('gv_user')) || null,
+  credits        : parseInt(localStorage.getItem('gv_credits')) || 5,
+  plan           : localStorage.getItem('gv_plan') || 'free'
 };
 
 const FACTORS = [
